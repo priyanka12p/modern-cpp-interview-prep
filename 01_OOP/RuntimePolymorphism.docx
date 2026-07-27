@@ -1,0 +1,401 @@
+# Runtime Polymorphism in C++
+
+NOTE: For runtime polymorphism, all three conditions are required:
+✅ The function must be virtual.
+✅ You must call it through a base class pointer or reference.
+✅ The pointer/reference must actually refer to a derived object.
+
+
+## What is Runtime Polymorphism?
+
+Runtime polymorphism is the ability of a program to decide **which overridden function to call during program execution (runtime)** instead of at compile time.
+
+It is achieved using:
+
+* Virtual functions
+* Inheritance
+* Base class pointer or reference
+
+---
+
+# Compile-Time vs Runtime
+
+## Compile-Time Binding (Static Binding)
+
+The compiler knows exactly which function to call.
+
+	Example:
+
+	Derived d;
+	d.Print();
+
+
+Here, the compiler knows that `d` is of type `Derived`.
+
+          Derived d;
+
+Compiler knows
+
+        d
+        │
+        ▼
+     Derived Object
+
+
+So the compiler directly generates a call to:
+
+
+Derived::Print();
+
+
+No runtime decision is needed.
+
+---
+
+## Runtime Binding (Dynamic Binding)
+
+The compiler **does not know** which derived object the base pointer/reference will point to.
+
+Example:
+
+	AbstractClass* ptr = new Derived();
+
+	ptr->Print();
+
+	Now the compiler only knows:
+
+	ptr
+
+	↓
+
+	AbstractClass*
+
+
+It **does not know** whether `ptr` points to:
+
+	Derived
+
+	OR
+
+	Circle
+
+	OR
+
+	Rectangle
+
+	OR
+
+Any other derived class
+
+
+Therefore, it postpones the decision until runtime.
+
+---
+
+# Why doesn't `Derived d; d.Print();` demonstrate runtime polymorphism?
+
+Consider:
+
+	Derived d;
+
+	d.Print();
+
+The compiler already knows:
+
+	d
+
+	↓
+
+	Derived
+
+
+Since the object's type is known during compilation, the compiler directly calls:
+
+	Derived::Print();
+
+
+Even though `Print()` is declared `virtual`, **runtime dispatch is not required**.
+
+The virtual function simply makes runtime polymorphism *possible* when accessed through a base class pointer or reference.
+
+---
+
+# How Runtime Polymorphism Works
+
+Suppose we have:
+
+AbstractClass* ptr = new Derived();
+
+
+Memory representation:
+
+                ptr
+                 │
+                 ▼
+        +------------------+
+        |   Derived Object |
+        +------------------+
+
+The compiler knows only:
+
+ptr is an AbstractClass*
+
+It cannot determine the actual object type during compilation.
+
+When the program executes:
+
+	ptr
+ 	│
+ 	▼
+	Derived Object
+
+The runtime system checks the object's **vptr**, which points to the **vtable**.
+
+	Derived Object
+	+----------------+
+	| vptr ----------|----------------------+
+	+----------------+                      |
+	| data members   |                      |
+	+----------------+                      |
+        	                               ▼
+                             	Derived vtable
+
+                             	Print() ---> Derived::Print()
+
+The function address stored in the vtable is invoked.
+
+Therefore:
+
+	ptr->Print();
+
+executes:
+
+Derived::Print();
+
+---
+
+# What if the function is NOT virtual?
+
+	class Base
+	{
+	public:
+
+    		void Print()
+    		{
+        		cout<<"Base";
+    		}	
+	};
+
+	class Derived : public Base
+	{
+	public:
+
+    	void Print()
+    	{
+        	cout<<"Derived";
+    	}
+	};
+
+	Derived d;
+
+	Base* ptr = &d;
+
+	ptr->Print();
+
+	Output
+
+	Base
+
+
+Why?
+
+Because `Print()` is **not virtual**.
+
+The compiler looks only at the **type of the pointer**.
+
+
+ptr
+
+↓
+
+Base*
+
+So during compilation it decides:
+
+Call Base::Print()
+
+No runtime lookup happens.
+
+---
+
+# With Virtual Function
+
+class Base
+{
+public:
+
+    virtual void Print()
+    {
+        cout<<"Base";
+    }
+};
+
+Now the same code:
+
+Derived d;
+
+Base* ptr = &d;
+
+ptr->Print();
+
+Output
+
+Derived
+
+Reason:
+
+The compiler generates code that performs a runtime lookup through the vtable.
+
+---
+
+# Static Type vs Dynamic Type
+
+This is an important interview concept.
+
+Consider:
+
+Derived d;
+
+Base* ptr = &d;
+
+Static Type
+
+Base*
+
+This is the type known by the compiler.
+
+Dynamic Type
+
+Derived
+
+This is the actual object created during execution.
+
+Runtime polymorphism uses the **dynamic type** to decide which overridden function to call.
+
+---
+
+# Conditions Required for Runtime Polymorphism
+
+All three conditions must be satisfied.
+
+✅ Inheritance
+
+Base
+ ↑
+Derived
+
+---
+
+✅ Virtual Function
+
+virtual void Print();
+
+---
+
+✅ Base Pointer or Base Reference
+
+Base* ptr = new Derived();
+
+OR
+
+Base& ref = derivedObject;
+
+Without these conditions, runtime polymorphism does not occur.
+
+---
+
+# Common Interview Questions
+
+### Q1. Does declaring a function `virtual` automatically mean runtime polymorphism?
+
+No.
+
+A virtual function only enables runtime polymorphism.
+
+It occurs only when the function is called through a base class pointer or reference.
+
+---
+
+### Q2. Why does this not use runtime polymorphism?
+
+Derived d;
+
+d.Print();
+
+Because the compiler already knows the object's type (`Derived`) during compilation.
+
+---
+
+### Q3. Why does this use runtime polymorphism?
+
+Base* ptr = new Derived();
+
+ptr->Print();
+
+Because the compiler knows only that `ptr` is a `Base*`. The actual object (`Derived`) is determined at runtime.
+
+---
+
+### Q4. What is the difference between static binding and dynamic binding?
+
+| Static Binding       | Dynamic Binding         |
+| -------------------- | ----------------------- |
+| Compile time         | Runtime                 |
+| Non-virtual function | Virtual function        |
+| Faster               | Slight runtime overhead |
+| No vtable lookup     | Uses vtable lookup      |
+
+---
+
+# Key Takeaway
+
+Think of it this way:
+
+Derived d;
+
+Compiler already knows
+
+↓
+
+Derived
+
+↓
+
+Call Derived::Print()
+
+No runtime decision.
+
+---
+
+Base* ptr = new Derived();
+
+Compiler knows
+
+↓
+
+Base*
+
+↓
+
+Actual object?
+
+↓
+
+Need runtime lookup
+
+↓
+
+Derived::Print()
+
+This is the essence of runtime polymorphism in C++.
+
